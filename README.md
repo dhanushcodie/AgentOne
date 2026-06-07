@@ -1,4 +1,4 @@
-# Requirement Pipeline
+# AgentOne
 
 A multi-agent requirements engineering pipeline that interviews you about what you want to build, then produces a structured, market-researched, and critiqued requirements plan.
 
@@ -7,26 +7,26 @@ A multi-agent requirements engineering pipeline that interviews you about what y
 ## What's in here
 
 ```
-requirement-pipeline/
+AgentOne/
 ├── scripts/
 │   └── requirements_pipeline/   # Standalone Python CLI — runs without Claude Code
 └── skills/
-    └── requirements.md          # Claude Code skill — runs inside Claude Code as /requirements
+    └── agentone.md              # Claude Code skill — runs inside Claude Code as /agentone
 ```
 
 ---
 
-## Option 1 — Claude Code skill (`/requirements`)
+## Option 1 — Claude Code skill (`/agentone`)
 
-The skill in `skills/requirements.md` runs the full pipeline **inside Claude Code** using its native multi-agent system. No Python setup needed.
+The skill in `skills/agentone.md` runs the full pipeline **inside Claude Code** using its native multi-agent system. No Python setup needed.
 
 ### Install
 
-Copy `skills/requirements.md` into your Claude Code commands folder:
+Copy `skills/agentone.md` into your Claude Code commands folder:
 
 ```bash
 # macOS / Linux
-cp skills/requirements.md ~/.claude/commands/requirements.md
+cp skills/agentone.md ~/.claude/commands/agentone.md
 ```
 
 ### Use
@@ -34,7 +34,7 @@ cp skills/requirements.md ~/.claude/commands/requirements.md
 Open any project in Claude Code and type:
 
 ```
-/requirements
+/agentone
 ```
 
 Claude Code will conduct the interview, then run planner, market researcher, brainstormer, and critic agents in parallel before synthesizing a final plan. On approval, the plan is saved as `requirements_<AppName>.md` in your working directory.
