@@ -9,7 +9,7 @@ A multi-agent requirements engineering pipeline that interviews you about what y
 ```
 AgentOne/
 ├── scripts/
-│   └── requirements_pipeline/   # Standalone Python CLI — runs without Claude Code
+│   └── PlanningAgent/           # Standalone Python CLI — runs without Claude Code
 └── skills/
     └── agentone.md              # Claude Code skill — runs inside Claude Code as /agentone
 ```
@@ -41,7 +41,7 @@ Claude Code will conduct the interview, then run planner, market researcher, bra
 
 ---
 
-## Option 2 — Python CLI (`scripts/requirements_pipeline`)
+## Option 2 — Python CLI (`scripts/PlanningAgent`)
 
 The Python pipeline runs standalone via the Anthropic SDK — no Claude Code required.
 
@@ -55,7 +55,7 @@ export ANTHROPIC_API_KEY=your_key_here
 ### Use
 
 ```bash
-cd scripts/requirements_pipeline
+cd scripts/PlanningAgent
 
 # Interactive (prompts for domain):
 python3 pipeline.py
