@@ -1,0 +1,9 @@
+{
+  "name": "agentone",
+  "version": "1.0.0",
+  "description": "Multi-agent requirements engineering pipeline — conducts structured interviews and produces market-researched, critiqued requirements plans",
+  "author": {
+    "name": "dhanushcodie"
+  },
+  "license": "MIT"
+}

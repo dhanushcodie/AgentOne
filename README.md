@@ -8,25 +8,35 @@ A multi-agent requirements engineering pipeline that interviews you about what y
 
 ```
 AgentOne/
-├── scripts/
-│   └── PlanningAgent/           # Standalone Python CLI — runs without Claude Code
-└── skills/
-    └── agentone.md              # Claude Code skill — runs inside Claude Code as /agentone
+├── .claude-plugin/              # Plugin metadata (makes this an installable Claude Code plugin)
+├── skills/
+│   └── agentone/
+│       └── SKILL.md             # Claude Code skill — runs inside Claude Code as /agentone
+└── scripts/
+    └── PlanningAgent/           # Standalone Python CLI — runs without Claude Code
 ```
 
 ---
 
-## Option 1 — Claude Code skill (`/agentone`)
+## Option 1 — Claude Code plugin (`/agentone`)
 
-The skill in `skills/agentone.md` runs the full pipeline **inside Claude Code** using its native multi-agent system. No Python setup needed.
+The skill runs the full pipeline **inside Claude Code** using its native multi-agent system. No Python setup needed.
 
-### Install
+### Install (plugin — recommended)
 
-Copy `skills/agentone.md` into your Claude Code commands folder:
+In any Claude Code session:
+
+```
+/add-plugin-marketplace https://github.com/dhanushcodie/AgentOne
+/install-plugin agentone
+```
+
+### Install (manual fallback)
 
 ```bash
 # macOS / Linux
-cp skills/agentone.md ~/.claude/commands/agentone.md
+mkdir -p ~/.claude/commands/agentone
+cp skills/agentone/SKILL.md ~/.claude/commands/agentone/SKILL.md
 ```
 
 ### Use

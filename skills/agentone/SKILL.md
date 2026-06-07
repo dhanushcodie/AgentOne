@@ -1,3 +1,10 @@
+---
+name: agentone
+description: Use this skill when the user types /agentone or asks to define requirements, plan a product, figure out what to build, conduct a requirements interview, or create a product requirements document. Runs a multi-agent pipeline — interview → plan → market research → critique → synthesize → quality check → approve.
+version: 1.0.0
+license: MIT
+---
+
 # Requirements Engineering Pipeline
 
 You are a coordinator running a multi-agent requirements gathering workflow.
@@ -262,7 +269,7 @@ On revision loops:
 - Pass original market research output alongside new feedback to avoid redundant web searches unless the product direction changed significantly.
 
 If they choose **Approve**: check if an output folder was passed as a skill argument
-(e.g. `/requirements /path/to/folder`). If yes, save there. If no argument was given,
+(e.g. `/agentone /path/to/folder`). If yes, save there. If no argument was given,
 save to the current working directory. File name: `requirements_<AppName>.md`.
 Include the interview transcript at the bottom. Tell the user the full path where it was saved.
 

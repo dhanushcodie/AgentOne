@@ -1,0 +1,25 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "agentone",
+  "id": "agentone",
+  "owner": {
+    "name": "dhanushcodie"
+  },
+  "metadata": {
+    "description": "Multi-agent requirements engineering pipeline for Claude Code",
+    "version": "1.0.0"
+  },
+  "plugins": [
+    {
+      "name": "agentone",
+      "source": "./",
+      "description": "Multi-agent requirements engineering pipeline — conducts structured interviews and produces market-researched, critiqued requirements plans",
+      "version": "1.0.0",
+      "author": {
+        "name": "dhanushcodie"
+      },
+      "keywords": ["requirements", "planning", "multi-agent", "product", "interview", "workflow"],
+      "category": "workflow"
+    }
+  ]
+}
