@@ -1,0 +1,205 @@
+"""
+Market Researcher agent: uses web search to build a grounded picture of the
+competitive landscape, user pain points, market size, and monetisation models.
+
+Runs in parallel with brainstormer and critic. Skipped if config.enable_market_research
+is False (useful for offline dev or cost control).
+
+Two-phase design:
+  Phase 1 — Collect: mandated search categories ensure no category is skipped.
+  Phase 2 — Self-verify: agent reviews its own output for gaps before finalising.
+
+run_targeted() is called by the QC loop to fill specific gaps identified post-synthesis.
+"""
+
+import anthropic
+from state import PipelineState
+from config import PipelineConfig
+from utils import warn_if_truncated
+
+_client = anthropic.Anthropic()
+
+_COLLECT_SYSTEM = """\
+You are a product market researcher. Use web search to build a real, grounded market
+picture. Do not guess or rely on training data — search for current information.
+
+MANDATORY SEARCH CATEGORIES — you must run at least one search per category before
+synthesising. Formulate queries based on the product domain in the context.
+
+  Category 1: Direct competitors (broad landscape search)
+  Category 2: Indie/solo competitors — search indiehackers.com and producthunt.com explicitly
+  Category 3: User complaints — Reddit, App Store reviews, or Trustpilot
+  Category 4: Pricing and monetisation of discovered competitors
+  Category 5: Revenue or MRR data for any solo-built products found (to find the right comparable)
+
+After completing all five categories, produce your research report with these sections:
+
+## Competitor Landscape
+At least 3 competitors (aim for 5). For each: name, URL, what they do well, what they
+are missing, pricing model, target user. Explicitly call out any indie/solo-built products
+found — these are the most relevant revenue comparables.
+
+## Market Gaps
+Specific unserved or underserved problems. Not "better UX" — concrete missing features
+or user segments.
+
+## User Pain Points
+Real complaints from real users. Quote or paraphrase with source. Do not invent pain
+points — only report what you found.
+
+## Market Size Signal
+Any data on market size, user volume, or demand. Note confidence level. Say "not found"
+if nothing was found — do not fabricate.
+
+## Monetisation Models That Work
+What competitors charge and what users pay for vs. expect free. Include price points.
+Identify the closest comparable in the SAME market — not an analogy from adjacent markets.
+
+## Verdict
+2-3 sentences: real gap or not? Strongest single opportunity?
+If the market is well-served, say so — do not suppress negative findings.
+
+Be factual. Cite sources. Do not pad.
+"""
+
+_VERIFY_SYSTEM = """\
+You are reviewing your own market research output for gaps and errors before it is
+used to build a product plan. Be self-critical.
+
+Check each item below. For any item that fails, run a targeted web search to fix it.
+
+SELF-VERIFICATION CHECKLIST:
+  1. Did I find at least one solo/indie-built competitor from Indie Hackers or Product Hunt?
+     If no — search now.
+  2. Can I verify the revenue figure I plan to cite with a direct source?
+     If no — search for it, or mark it as unverified.
+  3. Is my chosen monetisation comparable actually in the same market (not adjacent)?
+     If not — search for a better one.
+  4. Did I find real user complaints from Reddit or a review site (not assumed pain points)?
+     If no — search now.
+  5. Did I miss any major product category of competitor (e.g. API providers, B2B tools,
+     government tools, app-store products)?
+     If yes — search for it.
+
+After any additional searches, output your COMPLETE, CORRECTED research report using
+the same section headings as the original. Do not summarise — output the full report.
+"""
+
+
+def _run_agentic_loop(system: str, messages: list, max_searches: int, config: PipelineConfig) -> str:
+    """Shared agentic loop for both collect and verify passes."""
+    tools = [{
+        "type": "web_search_20250305",
+        "name": "web_search",
+        "max_uses": max_searches,
+    }]
+    text_parts = []
+
+    while True:
+        response = _client.messages.create(
+            model=config.model,
+            max_tokens=config.tokens_market_research,
+            system=system,
+            tools=tools,
+            messages=messages,
+        )
+
+        for block in response.content:
+            if hasattr(block, "type") and block.type == "text":
+                text_parts.append(block.text)
+
+        if response.stop_reason == "end_turn":
+            break
+
+        if response.stop_reason == "tool_use":
+            messages.append({"role": "assistant", "content": response.content})
+            tool_results = []
+            for block in response.content:
+                if hasattr(block, "type") and block.type == "tool_use":
+                    paired = any(
+                        getattr(b, "type", "") == "tool_result"
+                        and getattr(b, "tool_use_id", "") == block.id
+                        for b in response.content
+                    )
+                    if not paired:
+                        tool_results.append({
+                            "type": "tool_result",
+                            "tool_use_id": block.id,
+                            "content": "Search executed.",
+                        })
+            if tool_results:
+                messages.append({"role": "user", "content": tool_results})
+        else:
+            break
+
+    warn_if_truncated(response, "market_research")
+    return "\n\n".join(text_parts)
+
+
+def _build_prompt(state: PipelineState) -> str:
+    parts = [
+        f"Domain: {state.domain}",
+        f"App: {state.app_name}" if state.app_name else "",
+        f"Goal: {state.goal}" if state.goal else "",
+        "",
+        "Interview context:",
+        state.interview_summary() if state.interview else "(no interview yet)",
+    ]
+    return "\n".join(p for p in parts if p is not None)
+
+
+def run(state: PipelineState, config: PipelineConfig) -> PipelineState:
+    if not config.enable_market_research:
+        state.market_research = "(market research disabled in config)"
+        return state
+
+    # Phase 1: collect research across all mandatory categories
+    # Reserve half the search budget for the self-verify pass
+    collect_budget = config.market_research_max_searches // 2
+    verify_budget = config.market_research_max_searches - collect_budget
+
+    collect_messages = [{"role": "user", "content": _build_prompt(state)}]
+    collected = _run_agentic_loop(_COLLECT_SYSTEM, collect_messages, collect_budget, config)
+
+    # Phase 2: self-verification pass
+    verify_messages = [{"role": "user", "content": (
+        f"Here is the market research you collected:\n\n{collected}\n\n"
+        "Now run the self-verification checklist and output the corrected, complete report."
+    )}]
+    verified = _run_agentic_loop(_VERIFY_SYSTEM, verify_messages, verify_budget, config)
+
+    state.market_research = verified or collected
+    return state
+
+
+def run_targeted(state: PipelineState, config: PipelineConfig, queries: list[str]) -> PipelineState:
+    """
+    Called by the QC loop to fill specific gaps identified after synthesis.
+    Runs the given queries and appends new findings to state.market_research.
+    """
+    if not queries or not config.enable_market_research:
+        return state
+
+    query_list = "\n".join(f"  - {q}" for q in queries)
+    prompt = (
+        f"The quality checker identified gaps in the market research. "
+        f"Run these targeted searches and report ONLY what you find:\n\n{query_list}\n\n"
+        f"Existing research for context:\n\n{state.market_research}"
+    )
+
+    targeted_system = """\
+You are filling specific gaps in market research identified by a quality audit.
+Run the provided searches. Report only what you find — do not repeat existing research.
+Be factual. Cite sources. If a search returns nothing useful, say so.
+"""
+
+    messages = [{"role": "user", "content": prompt}]
+    new_findings = _run_agentic_loop(targeted_system, messages, len(queries) + 1, config)
+
+    if new_findings:
+        state.market_research = (
+            state.market_research.rstrip()
+            + "\n\n## QC-Targeted Research (additional findings)\n\n"
+            + new_findings
+        )
+    return state
