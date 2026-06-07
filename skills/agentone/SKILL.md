@@ -268,9 +268,17 @@ On revision loops:
 - Re-run all four agents with updated context — including market researcher, so research reflects any new direction.
 - Pass original market research output alongside new feedback to avoid redundant web searches unless the product direction changed significantly.
 
-If they choose **Approve**: check if an output folder was passed as a skill argument
-(e.g. `/agentone /path/to/folder`). If yes, save there. If no argument was given,
-save to the current working directory. File name: `requirements_<AppName>_v<N>.md` where N is the next available version number (check for existing files — if `requirements_<AppName>_v1.md` exists, save as `_v2.md`, and so on).
+If they choose **Approve**: ask the user where to save the file before writing it.
+Use AskUserQuestion with a single question: "Where should I save the requirements file?"
+Offer these options:
+  1. Current working directory (show the actual path)
+  2. Custom path — I'll type it
+
+If they pick option 1, save to the current working directory.
+If they pick "Other" or custom path, wait for them to type the path, then save there.
+If a path was passed as a skill argument (e.g. `/agentone /path/to/folder`), skip the question and save there directly.
+
+File name: `requirements_<AppName>_v<N>.md` where N is the next available version number (check for existing files in the chosen directory — if `requirements_<AppName>_v1.md` exists, save as `_v2.md`, and so on).
 Include the interview transcript at the bottom. Tell the user the full path where it was saved.
 
 If they choose **Quit**: stop immediately.

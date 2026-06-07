@@ -24,11 +24,11 @@ The skill runs the full pipeline **inside Claude Code** using its native multi-a
 
 ### Install (plugin — recommended)
 
-In any Claude Code session:
+Run these in the **Claude Code CLI**:
 
 ```
-/add-plugin-marketplace https://github.com/dhanushcodie/AgentOne
-/install-plugin agentone
+/plugin marketplace add https://github.com/dhanushcodie/AgentOne
+/plugin install agentone@agentone
 ```
 
 ### Install (manual fallback)
@@ -39,6 +39,17 @@ mkdir -p ~/.claude/commands/agentone
 cp skills/agentone/SKILL.md ~/.claude/commands/agentone/SKILL.md
 ```
 
+### Update
+
+Claude Code has no single update command — to get the latest version, uninstall and reinstall:
+
+```
+/plugin uninstall agentone@agentone
+/plugin install agentone@agentone
+```
+
+To update automatically on every Claude Code startup, enable auto-update in the plugin UI: open `/plugin` → Marketplaces tab → toggle auto-update on.
+
 ### Use
 
 Open any project in Claude Code and type:
@@ -47,7 +58,7 @@ Open any project in Claude Code and type:
 /agentone
 ```
 
-Claude Code will conduct the interview, then run planner, market researcher, brainstormer, and critic agents in parallel before synthesizing a final plan. On approval, the plan is saved as `requirements_<AppName>.md` in your working directory.
+Claude Code will conduct the interview, then run planner, market researcher, brainstormer, and critic agents in parallel before synthesizing a final plan. On approval, it will ask where to save the file, then write `requirements_<AppName>_v<N>.md` to your chosen directory.
 
 ---
 
