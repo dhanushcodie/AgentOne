@@ -270,7 +270,7 @@ On revision loops:
 
 If they choose **Approve**: check if an output folder was passed as a skill argument
 (e.g. `/agentone /path/to/folder`). If yes, save there. If no argument was given,
-save to the current working directory. File name: `requirements_<AppName>.md`.
+save to the current working directory. File name: `requirements_<AppName>_v<N>.md` where N is the next available version number (check for existing files — if `requirements_<AppName>_v1.md` exists, save as `_v2.md`, and so on).
 Include the interview transcript at the bottom. Tell the user the full path where it was saved.
 
 If they choose **Quit**: stop immediately.

@@ -155,7 +155,10 @@ def _save_plan(state: PipelineState, config: PipelineConfig, output_dir: str | N
     save_dir = save_dir if os.path.isabs(save_dir) else os.path.join(_PIPELINE_DIR, save_dir)
     os.makedirs(save_dir, exist_ok=True)
     label = (state.app_name or state.domain)[:24].replace(" ", "_")
-    path = os.path.join(save_dir, f"output_plan_{label}.md")
+    version = 1
+    while os.path.exists(os.path.join(save_dir, f"output_plan_{label}_v{version}.md")):
+        version += 1
+    path = os.path.join(save_dir, f"output_plan_{label}_v{version}.md")
     with open(path, "w") as f:
         title = state.app_name or state.domain
         f.write(f"# Requirements Plan: {title}\n\n")
