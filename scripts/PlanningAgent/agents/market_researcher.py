@@ -16,7 +16,7 @@ run_targeted() is called by the QC loop to fill specific gaps identified post-sy
 import anthropic
 from state import PipelineState
 from config import PipelineConfig
-from utils import warn_if_truncated
+from utils import run_search_loop
 
 _client = anthropic.Anthropic()
 
@@ -101,54 +101,17 @@ the same section headings as the original. Do not summarise — output the full 
 """
 
 
-def _run_agentic_loop(system: str, messages: list, max_searches: int, config: PipelineConfig) -> str:
-    """Shared agentic loop for both collect and verify passes."""
-    tools = [{
-        "type": "web_search_20250305",
-        "name": "web_search",
-        "max_uses": max_searches,
-    }]
-    text_parts = []
-
-    while True:
-        response = _client.messages.create(
-            model=config.model,
-            max_tokens=config.tokens_market_research,
-            system=system,
-            tools=tools,
-            messages=messages,
-        )
-
-        for block in response.content:
-            if hasattr(block, "type") and block.type == "text":
-                text_parts.append(block.text)
-
-        if response.stop_reason == "end_turn":
-            break
-
-        if response.stop_reason == "tool_use":
-            messages.append({"role": "assistant", "content": response.content})
-            tool_results = []
-            for block in response.content:
-                if hasattr(block, "type") and block.type == "tool_use":
-                    paired = any(
-                        getattr(b, "type", "") == "tool_result"
-                        and getattr(b, "tool_use_id", "") == block.id
-                        for b in response.content
-                    )
-                    if not paired:
-                        tool_results.append({
-                            "type": "tool_result",
-                            "tool_use_id": block.id,
-                            "content": "Search executed.",
-                        })
-            if tool_results:
-                messages.append({"role": "user", "content": tool_results})
-        else:
-            break
-
-    warn_if_truncated(response, "market_research")
-    return "\n\n".join(text_parts)
+def _search(system: str, messages: list, max_searches: int, config: PipelineConfig) -> str:
+    """web_search agentic loop with correct pause_turn continuation (see utils)."""
+    return run_search_loop(
+        _client,
+        system=system,
+        messages=messages,
+        max_searches=max_searches,
+        model=config.model_for("market_researcher"),
+        max_tokens=config.tokens_market_research,
+        agent_name="market_research",
+    )
 
 
 def _build_prompt(state: PipelineState) -> str:
@@ -163,10 +126,30 @@ def _build_prompt(state: PipelineState) -> str:
     return "\n".join(p for p in parts if p is not None)
 
 
+_REVISION_SYSTEM = """\
+You are updating an existing market research report after the user revised the
+product direction. Do NOT redo the research from scratch.
+
+1. Read the existing report and the user's feedback.
+2. Decide which findings are invalidated or missing under the new direction.
+3. Run ONLY the targeted web searches needed to fill those gaps. If the feedback
+   does not change the market picture (e.g. wording, scope trims), run no searches.
+4. Output the COMPLETE updated report using the same section headings as the
+   original — carry forward everything still valid verbatim, replace what changed.
+
+Be factual. Cite sources. Do not pad.
+"""
+
+
 def run(state: PipelineState, config: PipelineConfig) -> PipelineState:
     if not config.enable_market_research:
         state.market_research = "(market research disabled in config)"
         return state
+
+    # Revision loop: update the existing report with targeted searches instead
+    # of re-burning the full research budget.
+    if state.market_research and state.user_feedback:
+        return _run_revision_update(state, config)
 
     # Phase 1: collect research across all mandatory categories
     # Most of the budget goes to collection; the rest to the self-verify pass
@@ -176,7 +159,7 @@ def run(state: PipelineState, config: PipelineConfig) -> PipelineState:
 
     collect_system = _COLLECT_SYSTEM.format(hook_features_min=config.hook_features_min)
     collect_messages = [{"role": "user", "content": _build_prompt(state)}]
-    collected = _run_agentic_loop(collect_system, collect_messages, collect_budget, config)
+    collected = _search(collect_system, collect_messages, collect_budget, config)
 
     # Phase 2: self-verification pass
     verify_system = _VERIFY_SYSTEM.format(hook_features_min=config.hook_features_min)
@@ -184,9 +167,23 @@ def run(state: PipelineState, config: PipelineConfig) -> PipelineState:
         f"Here is the market research you collected:\n\n{collected}\n\n"
         "Now run the self-verification checklist and output the corrected, complete report."
     )}]
-    verified = _run_agentic_loop(verify_system, verify_messages, verify_budget, config)
+    verified = _search(verify_system, verify_messages, verify_budget, config)
 
     state.market_research = verified or collected
+    return state
+
+
+def _run_revision_update(state: PipelineState, config: PipelineConfig) -> PipelineState:
+    print("  (revision: updating existing research with targeted searches only)")
+    messages = [{"role": "user", "content": (
+        f"{_build_prompt(state)}\n\n"
+        f"User feedback driving this revision:\n{state.user_feedback}\n\n"
+        f"Existing market research report:\n\n{state.market_research}"
+    )}]
+    updated = _search(_REVISION_SYSTEM, messages,
+                      config.revision_research_max_searches, config)
+    if updated:
+        state.market_research = updated
     return state
 
 
@@ -212,7 +209,7 @@ Be factual. Cite sources. If a search returns nothing useful, say so.
 """
 
     messages = [{"role": "user", "content": prompt}]
-    new_findings = _run_agentic_loop(targeted_system, messages, len(queries) + 1, config)
+    new_findings = _search(targeted_system, messages, len(queries) + 1, config)
 
     if new_findings:
         state.market_research = (

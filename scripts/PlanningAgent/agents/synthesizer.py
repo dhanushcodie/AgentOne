@@ -82,7 +82,7 @@ CORRECTIVE PASS — if a Quality Check Report is present in the context:
 
 def run(state: PipelineState, config: PipelineConfig) -> PipelineState:
     response = _client.messages.create(
-        model=config.model,
+        model=config.model_for("synthesizer"),
         max_tokens=config.tokens_synthesize,
         system=_SYSTEM,
         messages=[{"role": "user", "content": state.context_for_agents()}],

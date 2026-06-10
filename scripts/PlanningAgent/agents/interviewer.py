@@ -11,6 +11,7 @@ import json
 import anthropic
 from state import PipelineState, QAPair
 from config import PipelineConfig
+from utils import create_json_with_retry
 
 _client = anthropic.Anthropic()
 
@@ -98,13 +99,14 @@ def _ask_claude(state: PipelineState, config: PipelineConfig) -> dict:
         "topic has a concrete answer."
     )})
 
-    response = _client.messages.create(
-        model=config.model,
+    # Retries on malformed JSON so one glitchy response doesn't kill the interview.
+    return create_json_with_retry(
+        _client,
+        model=config.model_for("interviewer"),
         max_tokens=config.tokens_interview,
         system=_SYSTEM,
         messages=history,
     )
-    return json.loads(response.content[0].text)
 
 
 def _generate_summary(state: PipelineState, config: PipelineConfig,
@@ -122,7 +124,7 @@ def _generate_summary(state: PipelineState, config: PipelineConfig,
         prompt_parts += [f"- {c}" for c in corrections]
 
     response = _client.messages.create(
-        model=config.model,
+        model=config.model_for("interviewer"),
         max_tokens=config.tokens_interview_summary,
         system=_SUMMARY_SYSTEM,
         messages=[{"role": "user", "content": "\n".join(prompt_parts)}],

@@ -48,7 +48,7 @@ Be honest and direct. Do not soften findings.
 
 def _derive_lenses(state: PipelineState, base_lenses: list[str], config: PipelineConfig) -> list[str]:
     response = _client.messages.create(
-        model=config.model,
+        model=config.model_for("critic"),
         max_tokens=config.tokens_critique_derive,
         system=_DERIVE_SYSTEM,
         messages=[{"role": "user", "content": state.context_for_agents()}],
@@ -73,7 +73,7 @@ def run(state: PipelineState, config: PipelineConfig) -> PipelineState:
     lenses_str = "\n- ".join(lenses)
     system = _EVALUATE_SYSTEM.format(lenses=lenses_str)
     response = _client.messages.create(
-        model=config.model,
+        model=config.model_for("critic"),
         max_tokens=config.tokens_critique_evaluate,
         system=system,
         messages=[{"role": "user", "content": state.context_for_agents()}],

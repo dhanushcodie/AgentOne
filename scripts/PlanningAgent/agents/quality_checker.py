@@ -25,6 +25,7 @@ import json
 import anthropic
 from state import PipelineState
 from config import PipelineConfig
+from utils import run_search_loop, strip_json_fences
 
 _client = anthropic.Anthropic()
 
@@ -96,66 +97,20 @@ Be honest. Do not pass a plan that has real failures.
 
 
 def _run_agentic_loop(messages: list, max_searches: int, config: PipelineConfig) -> str:
-    tools = [{
-        "type": "web_search_20250305",
-        "name": "web_search",
-        "max_uses": max_searches,
-    }]
-    text_parts = []
-
-    while True:
-        response = _client.messages.create(
-            model=config.model,
-            max_tokens=config.tokens_quality_check,
-            system=_SYSTEM,
-            tools=tools,
-            messages=messages,
-        )
-
-        for block in response.content:
-            if hasattr(block, "type") and block.type == "text":
-                text_parts.append(block.text)
-
-        if response.stop_reason == "end_turn":
-            break
-
-        if response.stop_reason == "tool_use":
-            messages.append({"role": "assistant", "content": response.content})
-            tool_results = []
-            for block in response.content:
-                if hasattr(block, "type") and block.type == "tool_use":
-                    paired = any(
-                        getattr(b, "type", "") == "tool_result"
-                        and getattr(b, "tool_use_id", "") == block.id
-                        for b in response.content
-                    )
-                    if not paired:
-                        tool_results.append({
-                            "type": "tool_result",
-                            "tool_use_id": block.id,
-                            "content": "Search executed.",
-                        })
-            if tool_results:
-                messages.append({"role": "user", "content": tool_results})
-        else:
-            break
-
-    return "\n\n".join(text_parts)
+    """web_search agentic loop with correct pause_turn continuation (see utils)."""
+    return run_search_loop(
+        _client,
+        system=_SYSTEM,
+        messages=messages,
+        max_searches=max_searches,
+        model=config.model_for("quality_checker"),
+        max_tokens=config.tokens_quality_check,
+        agent_name="quality_check",
+    )
 
 
 def _parse_result(raw: str) -> tuple[bool, str, list[dict]]:
-    text = raw.strip()
-    # Strip markdown fences if present
-    if "```" in text:
-        parts = text.split("```")
-        for part in parts:
-            candidate = part.strip()
-            if candidate.startswith("json"):
-                candidate = candidate[4:].strip()
-            if candidate.startswith("{"):
-                text = candidate
-                break
-
+    text = strip_json_fences(raw)
     try:
         result = json.loads(text)
         return (

@@ -12,14 +12,19 @@ QC loop behaviour:
   - "reresearch" failures → market_researcher.run_targeted() then re-synthesize
   Unresolved failures after max_qc_iterations are surfaced to the user before Confirm.
 
+State is checkpointed to disk after every phase (config.checkpoint_file), so a
+crash or API error never loses the interview or paid research.
+
 Usage:
     python pipeline.py
     python pipeline.py --domain "Healthcare scheduling app"
     python pipeline.py --domain "Visa lookup" --output /path/to/output/folder
+    python pipeline.py --resume        # continue after a crash/interrupt
 """
 
 import os
 import sys
+import json
 import threading
 import argparse
 from state import PipelineState
@@ -160,6 +165,46 @@ def _confirm(state: PipelineState, max_iterations: int) -> tuple[bool, str]:
 
 _PIPELINE_DIR = os.path.dirname(os.path.abspath(__file__))
 
+# Phase progression for checkpoint/resume. state.phase records the last
+# COMPLETED phase; each step in run() only executes if not yet past it.
+_PHASES = ["", "interview", "wave1", "wave2", "gate", "synthesize", "qc"]
+
+
+def _phase_idx(phase: str) -> int:
+    return _PHASES.index(phase) if phase in _PHASES else 0
+
+
+def _checkpoint_path(config: PipelineConfig) -> str:
+    path = config.checkpoint_file
+    return path if os.path.isabs(path) else os.path.join(_PIPELINE_DIR, path)
+
+
+def _save_checkpoint(state: PipelineState, config: PipelineConfig) -> None:
+    if not config.enable_checkpoints:
+        return
+    path = _checkpoint_path(config)
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "w") as f:
+        json.dump(state.to_dict(), f, indent=2)
+
+
+def _load_checkpoint(config: PipelineConfig) -> PipelineState | None:
+    path = _checkpoint_path(config)
+    if not os.path.exists(path):
+        return None
+    try:
+        with open(path) as f:
+            return PipelineState.from_dict(json.load(f))
+    except (json.JSONDecodeError, TypeError, KeyError) as err:
+        print(f"[Checkpoint at {path} could not be read ({err}) — starting fresh.]")
+        return None
+
+
+def _clear_checkpoint(config: PipelineConfig) -> None:
+    path = _checkpoint_path(config)
+    if os.path.exists(path):
+        os.remove(path)
+
 
 def _save_plan(state: PipelineState, config: PipelineConfig, output_dir: str | None = None) -> None:
     save_dir = output_dir or config.output_dir
@@ -199,37 +244,69 @@ def _save_plan(state: PipelineState, config: PipelineConfig, output_dir: str | N
     print(f"\nPlan saved to: {path}")
 
 
-def run(domain: str, config: PipelineConfig = DEFAULT_CONFIG, output_dir: str | None = None) -> PipelineState:
-    state = PipelineState(domain=domain)
+def run(domain: str, config: PipelineConfig = DEFAULT_CONFIG,
+        output_dir: str | None = None, resume: bool = False) -> PipelineState:
+    state = None
+    if resume:
+        state = _load_checkpoint(config)
+        if state is None:
+            print("[No checkpoint found — starting fresh.]")
+        else:
+            print(f"[Resuming '{state.app_name or state.domain}' from checkpoint "
+                  f"(last completed phase: {state.phase or 'none'}, iteration {state.iteration})]")
+    if state is None:
+        state = PipelineState(domain=domain)
 
     # Phase 1: Interview + confirmed understanding
-    state = interviewer.run(state, config)
+    if _phase_idx(state.phase) < _phase_idx("interview"):
+        state = interviewer.run(state, config)
+        state.phase = "interview"
+        _save_checkpoint(state, config)
 
-    while state.iteration < config.max_plan_iterations:
-        state.iteration += 1
+    while True:
+        # phase == "interview" means a planning round is starting (fresh or revision)
+        if state.phase == "interview":
+            if state.iteration >= config.max_plan_iterations:
+                break
+            state.iteration += 1
 
         # Phase 2 — Wave 1: Plan + Market Research in parallel
-        research_note = " + Market Researcher" if config.enable_market_research else ""
-        print(f"\n[Wave 1: Planner{research_note} running in parallel...]")
-        if config.enable_market_research:
-            print("  (market research uses web search and a self-verify pass — takes longer)")
-        state = _run_wave1(state, config)
+        if _phase_idx(state.phase) < _phase_idx("wave1"):
+            research_note = " + Market Researcher" if config.enable_market_research else ""
+            print(f"\n[Wave 1: Planner{research_note} running in parallel...]")
+            if config.enable_market_research:
+                print("  (market research uses web search and a self-verify pass — takes longer)")
+            state = _run_wave1(state, config)
+            state.phase = "wave1"
+            _save_checkpoint(state, config)
 
         # Phase 3 — Wave 2: Brainstorm + Critique, grounded in the research
-        print("[Wave 2: Brainstormer + Critic running in parallel (with research in context)...]")
-        state = _run_wave2(state, config)
+        if _phase_idx(state.phase) < _phase_idx("wave2"):
+            print("[Wave 2: Brainstormer + Critic running in parallel (with research in context)...]")
+            state = _run_wave2(state, config)
+            state.phase = "wave2"
+            _save_checkpoint(state, config)
 
         # Phase 4: Feature gate — user picks which candidate features to include.
         # On revision loops, prior selections carry forward instead of re-asking.
-        if state.iteration == 1 or not (state.selected_features or state.rejected_features):
-            state = feature_gate.run(state, config)
+        if _phase_idx(state.phase) < _phase_idx("gate"):
+            if state.iteration == 1 or not (state.selected_features or state.rejected_features):
+                state = feature_gate.run(state, config)
+            state.phase = "gate"
+            _save_checkpoint(state, config)
 
         # Phase 5: Synthesize
-        print("\n[Synthesizer merging results...]")
-        state = synthesizer.run(state, config)
+        if _phase_idx(state.phase) < _phase_idx("synthesize"):
+            print("\n[Synthesizer merging results...]")
+            state = synthesizer.run(state, config)
+            state.phase = "synthesize"
+            _save_checkpoint(state, config)
 
         # Phase 6: Quality Check loop
-        state = _run_qc_loop(state, config)
+        if _phase_idx(state.phase) < _phase_idx("qc"):
+            state = _run_qc_loop(state, config)
+            state.phase = "qc"
+            _save_checkpoint(state, config)
 
         # Phase 7: Present and confirm
         _display_plan(state)
@@ -238,12 +315,16 @@ def run(domain: str, config: PipelineConfig = DEFAULT_CONFIG, output_dir: str | 
         if approved:
             print("\nPlan approved!")
             _save_plan(state, config, output_dir)
+            _clear_checkpoint(config)
             return state
 
-        # Reset QC state for next iteration
+        # Revision: reset QC state and rewind the phase so the next round
+        # re-runs both waves and synthesis with the feedback in context.
         state.qc_report = ""
         state.qc_passed = False
         state.user_feedback = feedback
+        state.phase = "interview"
+        _save_checkpoint(state, config)
         print(f"\n[Re-planning with your feedback... (iteration {state.iteration + 1})]")
 
     return state
@@ -255,7 +336,12 @@ if __name__ == "__main__":
                         help="Problem domain (e.g. 'Visa tracking app')")
     parser.add_argument("--output", type=str, default=None,
                         help="Output folder for the saved plan (overrides config.output_dir)")
+    parser.add_argument("--resume", action="store_true",
+                        help="Resume from the last checkpoint instead of starting fresh")
     args = parser.parse_args()
 
-    domain = args.domain or input("What are you building? (describe in a few words)\n> ").strip()
-    run(domain, output_dir=args.output)
+    if args.resume:
+        run(args.domain or "", output_dir=args.output, resume=True)
+    else:
+        domain = args.domain or input("What are you building? (describe in a few words)\n> ").strip()
+        run(domain, output_dir=args.output)

@@ -3,8 +3,17 @@ from dataclasses import dataclass, field
 
 @dataclass
 class PipelineConfig:
-    # Model used by all agents. Swap here to change for the entire pipeline.
+    # Default model for all agents. Swap here to change the entire pipeline.
     model: str = "claude-opus-4-8"
+
+    # Per-agent model overrides. Keys: "interviewer", "planner", "market_researcher",
+    # "brainstormer", "critic", "feature_gate", "synthesizer", "quality_checker".
+    # Agents not listed use `model`. e.g. drop the cheap structured steps to Haiku:
+    #   model_overrides={"interviewer": "claude-haiku-4-5", "feature_gate": "claude-haiku-4-5"}
+    model_overrides: dict[str, str] = field(default_factory=dict)
+
+    def model_for(self, agent: str) -> str:
+        return self.model_overrides.get(agent, self.model)
 
     # Interview is uncapped — it continues until every mandatory topic has a
     # concrete answer. Every `interview_checkin_every` questions, the user is
@@ -44,11 +53,20 @@ class PipelineConfig:
     market_research_collect_ratio: float = 2 / 3
     # Minimum number of competitor hook/standout features the researcher must find with cited evidence.
     hook_features_min: int = 3
+    # On revision loops, research runs as a targeted update on top of the existing
+    # report instead of a full re-research. This caps the update's search budget.
+    revision_research_max_searches: int = 6
 
     # Feature decision gate: after research + brainstorm, present a menu of
     # competitor hook features and brainstorm ideas for the user to pick from
     # before the plan is synthesized.
     enable_feature_gate: bool = True
+
+    # Checkpointing: state is saved to disk after each phase so a crash or API
+    # error doesn't lose the interview and paid research. Resume with --resume.
+    enable_checkpoints: bool = True
+    # Checkpoint location (relative paths resolve against the pipeline directory).
+    checkpoint_file: str = "output/.agentone_checkpoint.json"
 
     # Quality checker: runs post-synthesis to audit completeness, consistency, and factual correctness
     enable_quality_check: bool = True

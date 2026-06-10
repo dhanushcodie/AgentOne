@@ -51,7 +51,7 @@ def run(state: PipelineState, config: PipelineConfig) -> PipelineState:
     system = _SYSTEM.format(count=config.brainstorm_count,
                             original_count=config.brainstorm_original_count)
     response = _client.messages.create(
-        model=config.model,
+        model=config.model_for("brainstormer"),
         max_tokens=config.tokens_brainstorm,
         system=system,
         messages=[{"role": "user", "content": state.context_for_agents()}],

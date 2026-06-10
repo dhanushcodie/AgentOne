@@ -60,7 +60,7 @@ def _build_menu(state: PipelineState, config: PipelineConfig) -> list[dict]:
         state.brainstorm,
     ]
     response = _client.messages.create(
-        model=config.model,
+        model=config.model_for("feature_gate"),
         max_tokens=config.tokens_feature_menu,
         system=_SYSTEM,
         messages=[{"role": "user", "content": "\n".join(parts)}],

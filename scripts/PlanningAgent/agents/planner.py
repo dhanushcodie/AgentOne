@@ -44,7 +44,7 @@ def run(state: PipelineState, config: PipelineConfig) -> PipelineState:
         prompt += f"\n\nUser feedback on previous plan:\n{state.user_feedback}\nRevise accordingly."
 
     response = _client.messages.create(
-        model=config.model,
+        model=config.model_for("planner"),
         max_tokens=config.tokens_plan,
         system=_SYSTEM,
         messages=[{"role": "user", "content": prompt}],

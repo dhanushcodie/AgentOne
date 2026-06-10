@@ -1,4 +1,4 @@
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
 from typing import Optional
 
 
@@ -42,6 +42,23 @@ class PipelineState:
     # Loop control
     iteration: int = 0
     user_feedback: str = ""
+    # Last completed phase ("interview", "wave1", "wave2", "gate", "synthesize",
+    # "qc") — drives checkpoint/resume and revision-loop re-runs.
+    phase: str = ""
+
+    def to_dict(self) -> dict:
+        return asdict(self)
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "PipelineState":
+        data = dict(data)
+        interview = [QAPair(**qa) for qa in data.pop("interview", [])]
+        state = cls(domain=data.pop("domain", ""))
+        state.interview = interview
+        for key, value in data.items():
+            if hasattr(state, key):
+                setattr(state, key, value)
+        return state
 
     def interview_summary(self) -> str:
         lines = []

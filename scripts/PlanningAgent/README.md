@@ -47,10 +47,19 @@ python3 pipeline.py --domain "Visa tracking app"
 
 # Custom output folder:
 python3 pipeline.py --domain "Visa tracking app" --output /path/to/folder
+
+# Continue after a crash or Ctrl-C — picks up from the last completed phase:
+python3 pipeline.py --resume
 ```
 
 The session asks for your app name and a one-line goal first, then runs the interview.
 On approval, the final plan is saved to `output/output_plan_<AppName>_v<N>.md`.
+
+State is checkpointed to disk after every phase, so a crash, network error, or
+interrupt never loses your interview answers or the paid web research — rerun
+with `--resume`. The checkpoint is deleted once a plan is approved and saved.
+Revision loops reuse the existing research and run only targeted top-up searches
+instead of re-burning the full search budget.
 
 ## Configuration
 
@@ -60,7 +69,8 @@ Key knobs:
 
 ```python
 DEFAULT_CONFIG = PipelineConfig(
-    model                          = "claude-opus-4-8",  # model used by all agents
+    model                          = "claude-opus-4-8",  # default model for all agents
+    model_overrides                = {},    # per-agent model map, e.g. {"interviewer": "claude-haiku-4-5"}
     interview_checkin_every        = 8,     # ask "keep going or proceed?" every N questions
     require_understanding_confirmation = True,  # confirm summary before research
     max_plan_iterations            = 3,     # how many times you can reject and re-plan
@@ -73,11 +83,15 @@ DEFAULT_CONFIG = PipelineConfig(
     market_research_max_searches   = 24,    # total web-search budget
     market_research_collect_ratio  = 2/3,   # share of budget for collection vs self-verify
     hook_features_min              = 3,     # min evidenced hook features researcher must find
+    revision_research_max_searches = 6,     # targeted top-up budget on revision loops
 
     enable_feature_gate            = True,  # menu of hook features + ideas you pick from
     enable_quality_check           = True,
     qc_max_searches                = 3,
     max_qc_iterations              = 2,
+
+    enable_checkpoints             = True,  # save state after each phase for --resume
+    checkpoint_file                = "output/.agentone_checkpoint.json",
 )
 ```
 
@@ -85,9 +99,13 @@ Token budgets per agent are also in `config.py` (`tokens_*`) if outputs get cut 
 
 ### Common tweaks
 
-**Faster / cheaper runs:**
+**Faster / cheaper runs** (drop everything, or just the cheap structured steps, to Haiku):
 ```python
-DEFAULT_CONFIG = PipelineConfig(model="claude-haiku-4-5-20251001")
+DEFAULT_CONFIG = PipelineConfig(model="claude-haiku-4-5")
+# or keep Opus where quality matters and downgrade only the cheap steps:
+DEFAULT_CONFIG = PipelineConfig(
+    model_overrides={"interviewer": "claude-haiku-4-5", "feature_gate": "claude-haiku-4-5"}
+)
 ```
 
 **Offline / no web search:**
