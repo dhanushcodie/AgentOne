@@ -2,8 +2,9 @@
 Market Researcher agent: uses web search to build a grounded picture of the
 competitive landscape, user pain points, market size, and monetisation models.
 
-Runs in parallel with brainstormer and critic. Skipped if config.enable_market_research
-is False (useful for offline dev or cost control).
+Runs in wave 1, in parallel with the planner; brainstormer and critic run afterwards
+with this research in context. Skipped if config.enable_market_research is False
+(useful for offline dev or cost control).
 
 Two-phase design:
   Phase 1 — Collect: mandated search categories ensure no category is skipped.
@@ -23,21 +24,32 @@ _COLLECT_SYSTEM = """\
 You are a product market researcher. Use web search to build a real, grounded market
 picture. Do not guess or rely on training data — search for current information.
 
-MANDATORY SEARCH CATEGORIES — you must run at least one search per category before
-synthesising. Formulate queries based on the product domain in the context.
+MANDATORY SEARCH CATEGORIES — you must run at least one search per category (aim for
+two) before synthesising. Formulate queries based on the product domain in the context.
 
   Category 1: Direct competitors (broad landscape search)
   Category 2: Indie/solo competitors — search indiehackers.com and producthunt.com explicitly
   Category 3: User complaints — Reddit, App Store reviews, or Trustpilot
   Category 4: Pricing and monetisation of discovered competitors
   Category 5: Revenue or MRR data for any solo-built products found (to find the right comparable)
+  Category 6: Standout/hook features — what users LOVE about each major competitor.
+              Search App Store / Play Store reviews, Product Hunt launch comments, and
+              Reddit praise threads for the specific features users rave about, the ones
+              that drive retention and word-of-mouth.
 
-After completing all five categories, produce your research report with these sections:
+After completing all six categories, produce your research report with these sections:
 
 ## Competitor Landscape
 At least 3 competitors (aim for 5). For each: name, URL, what they do well, what they
 are missing, pricing model, target user. Explicitly call out any indie/solo-built products
 found — these are the most relevant revenue comparables.
+
+## Standout / Hook Features
+At least {hook_features_min} features (across competitors) that users demonstrably love,
+each with: feature name, which competitor, why users love it (quote or paraphrase real
+praise with source), and whether/how it would transfer to this product. These are
+candidates the user will be asked to adopt — evidence quality matters. If you cannot
+find real praise for a feature, do not list it; say "not found" instead.
 
 ## Market Gaps
 Specific unserved or underserved problems. Not "better UX" — concrete missing features
@@ -80,6 +92,9 @@ SELF-VERIFICATION CHECKLIST:
   5. Did I miss any major product category of competitor (e.g. API providers, B2B tools,
      government tools, app-store products)?
      If yes — search for it.
+  6. Did I capture at least {hook_features_min} standout/hook features with cited evidence
+     of real user praise (reviews, Product Hunt comments, Reddit)?
+     If no — search now. Asserted-but-unevidenced hook features do not count.
 
 After any additional searches, output your COMPLETE, CORRECTED research report using
 the same section headings as the original. Do not summarise — output the full report.
@@ -154,19 +169,22 @@ def run(state: PipelineState, config: PipelineConfig) -> PipelineState:
         return state
 
     # Phase 1: collect research across all mandatory categories
-    # Reserve half the search budget for the self-verify pass
-    collect_budget = config.market_research_max_searches // 2
-    verify_budget = config.market_research_max_searches - collect_budget
+    # Most of the budget goes to collection; the rest to the self-verify pass
+    collect_budget = max(1, round(config.market_research_max_searches
+                                  * config.market_research_collect_ratio))
+    verify_budget = max(1, config.market_research_max_searches - collect_budget)
 
+    collect_system = _COLLECT_SYSTEM.format(hook_features_min=config.hook_features_min)
     collect_messages = [{"role": "user", "content": _build_prompt(state)}]
-    collected = _run_agentic_loop(_COLLECT_SYSTEM, collect_messages, collect_budget, config)
+    collected = _run_agentic_loop(collect_system, collect_messages, collect_budget, config)
 
     # Phase 2: self-verification pass
+    verify_system = _VERIFY_SYSTEM.format(hook_features_min=config.hook_features_min)
     verify_messages = [{"role": "user", "content": (
         f"Here is the market research you collected:\n\n{collected}\n\n"
         "Now run the self-verification checklist and output the corrected, complete report."
     )}]
-    verified = _run_agentic_loop(_VERIFY_SYSTEM, verify_messages, verify_budget, config)
+    verified = _run_agentic_loop(verify_system, verify_messages, verify_budget, config)
 
     state.market_research = verified or collected
     return state

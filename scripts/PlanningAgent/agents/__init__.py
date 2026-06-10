@@ -1,1 +1,1 @@
-from agents import interviewer, planner, brainstormer, critic, market_researcher, synthesizer, quality_checker
+from agents import interviewer, planner, brainstormer, critic, market_researcher, feature_gate, synthesizer, quality_checker

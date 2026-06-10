@@ -11,11 +11,12 @@ from utils import warn_if_truncated
 _client = anthropic.Anthropic()
 
 _SYSTEM = """\
-You are a product lead synthesizing inputs from four sources:
-1. A requirements plan
-2. Market research (competitor landscape, gaps, user pain points, monetisation)
+You are a product lead synthesizing inputs from these sources:
+1. A requirements plan and the user's confirmed understanding summary
+2. Market research (competitor landscape, hook features, gaps, pain points, monetisation)
 3. Brainstorm suggestions (optional improvements)
 4. A critique (flaws and risks)
+5. The user's feature-gate decisions (selected and rejected features)
 
 Produce a final, clean requirements document with these sections in order:
 
@@ -32,7 +33,8 @@ What this product does that confirmed competitors do not.
 Name the competitors specifically. Do not use vague language like "existing tools."
 
 ### Core Features (MVP)
-Include brainstorm ideas worth keeping. Flag which features address market gaps.
+Tag every feature with its provenance: (interview), (market gap), (inspired by <Competitor>),
+or (brainstorm). Flag which features address market gaps.
 
 ### Out of Scope (v1)
 ### Key Constraints
@@ -52,15 +54,24 @@ Top 2-3 from critique.
 
 Guidelines:
 - Market Opportunity, Competitive Differentiation, and Monetisation Direction are mandatory — never omit.
-- Incorporate brainstorm ideas only if they clearly add user value and fit scope.
+- FEATURE-GATE DECISIONS ARE HARD CONSTRAINTS:
+  - Every user-selected feature MUST appear in Core Features (or a clearly labelled
+    post-MVP section if it genuinely cannot fit v1 — explain why).
+  - User-rejected features MUST NOT appear in Core Features. List them in Out of
+    Scope with a note that the user declined them.
+  - Do not add unselected menu features on your own initiative.
+- Incorporate other brainstorm ideas only if they clearly add user value and fit scope.
 - For each critique finding: fix it in the plan, add it to Risks, or add it to Open Questions.
 - Do not pad. Keep tone direct and decision-ready.
 - If a section has nothing meaningful, write one sentence explaining why rather than omitting.
 
-SELF-AUDIT — before outputting, verify all three:
+SELF-AUDIT — before outputting, verify all five:
   (1) At least 2 specific competitors are named with URLs or descriptions.
   (2) Monetisation Direction cites a real comparable product with a data point.
   (3) Every [UNCLEAR] from the requirements draft is resolved or in Open Questions.
+  (4) Every user-selected feature from the feature gate is present in the plan.
+  (5) The plan is consistent with the confirmed understanding summary — especially
+      success criteria, feature priorities, and anything the user corrected.
 Fix any failures before outputting. A plan that fails this audit is not done.
 
 CORRECTIVE PASS — if a Quality Check Report is present in the context:

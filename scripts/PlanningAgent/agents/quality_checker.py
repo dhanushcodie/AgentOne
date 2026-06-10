@@ -41,6 +41,11 @@ Completeness — mark PASS or FAIL:
   C3. Every [UNCLEAR] from the requirements draft is resolved or in Open Questions.
   C4. Market Opportunity section exists and is not a placeholder.
   C5. Competitive Differentiation names specific products (not vague "existing tools").
+  C6. Every user-selected feature (from the "User-Selected Features" list in context)
+      appears in the plan's Core Features (or an explicitly labelled post-MVP section).
+      Skip if no user-selected features are listed.
+  C7. The market research's Standout / Hook Features are backed by cited sources
+      (reviews, Product Hunt, Reddit) — not just asserted. Skip if section absent.
 
 Consistency — mark PASS or FAIL:
   K1. Core features logically address the problem statement.
@@ -49,6 +54,9 @@ Consistency — mark PASS or FAIL:
       (e.g. citing NomadList for a visa lookup tool = FAIL — different market)
   K4. Competitive Differentiation claims are consistent with the competitor descriptions.
   K5. The problem statement is grounded in real evidence (not just assumed pain points).
+  K6. The plan does not contradict the Confirmed Understanding summary — success
+      criteria, feature priorities, and user corrections are respected, and no
+      user-rejected feature appears in Core Features.
 
 PHASE 2 — TARGETED VERIFICATION (use web search only for failed items):
 

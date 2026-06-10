@@ -1,7 +1,11 @@
 """
 Requirements Engineering Pipeline
 ----------------------------------
-Interview → Plan → [Brainstorm || Critique || Market Research] → Synthesize → QC → Confirm
+Interview (+ confirmed understanding)
+  → Wave 1: [Plan || Market Research]
+  → Wave 2: [Brainstorm || Critique]  (both see the research)
+  → Feature Gate (user picks hook features + brainstorm ideas)
+  → Synthesize → QC → Confirm
 
 QC loop behaviour:
   - "synthesis" failures  → synthesizer corrective pass (sees qc_report in context)
@@ -21,40 +25,47 @@ import argparse
 from state import PipelineState
 from config import PipelineConfig, DEFAULT_CONFIG
 
-from agents import interviewer, planner, brainstormer, critic, market_researcher, synthesizer, quality_checker
+from agents import (interviewer, planner, brainstormer, critic, market_researcher,
+                    feature_gate, synthesizer, quality_checker)
 
 
-def _run_parallel(state: PipelineState, config: PipelineConfig) -> PipelineState:
-    """Run brainstormer, critic, and market_researcher concurrently."""
-    brainstorm_state = PipelineState.__new__(PipelineState)
-    brainstorm_state.__dict__.update(state.__dict__)
-    critic_state = PipelineState.__new__(PipelineState)
-    critic_state.__dict__.update(state.__dict__)
-    research_state = PipelineState.__new__(PipelineState)
-    research_state.__dict__.update(state.__dict__)
+def _clone_state(state: PipelineState) -> PipelineState:
+    clone = PipelineState.__new__(PipelineState)
+    clone.__dict__.update(state.__dict__)
+    return clone
 
-    def _brainstorm():
-        brainstormer.run(brainstorm_state, config)
 
-    def _critique():
-        critic.run(critic_state, config)
+def _run_wave1(state: PipelineState, config: PipelineConfig) -> PipelineState:
+    """Wave 1: planner and market researcher in parallel (interview-driven)."""
+    plan_state = _clone_state(state)
+    research_state = _clone_state(state)
 
-    def _research():
-        market_researcher.run(research_state, config)
-
-    t1 = threading.Thread(target=_brainstorm)
-    t2 = threading.Thread(target=_critique)
-    t3 = threading.Thread(target=_research)
+    t1 = threading.Thread(target=lambda: planner.run(plan_state, config))
+    t2 = threading.Thread(target=lambda: market_researcher.run(research_state, config))
     t1.start()
     t2.start()
-    t3.start()
     t1.join()
     t2.join()
-    t3.join()
+
+    state.requirements = plan_state.requirements
+    state.market_research = research_state.market_research
+    return state
+
+
+def _run_wave2(state: PipelineState, config: PipelineConfig) -> PipelineState:
+    """Wave 2: brainstormer and critic in parallel — both see wave-1 research."""
+    brainstorm_state = _clone_state(state)
+    critic_state = _clone_state(state)
+
+    t1 = threading.Thread(target=lambda: brainstormer.run(brainstorm_state, config))
+    t2 = threading.Thread(target=lambda: critic.run(critic_state, config))
+    t1.start()
+    t2.start()
+    t1.join()
+    t2.join()
 
     state.brainstorm = brainstorm_state.brainstorm
     state.critique = critic_state.critique
-    state.market_research = research_state.market_research
     return state
 
 
@@ -163,6 +174,19 @@ def _save_plan(state: PipelineState, config: PipelineConfig, output_dir: str | N
         title = state.app_name or state.domain
         f.write(f"# Requirements Plan: {title}\n\n")
         f.write(state.final_plan)
+        if state.understanding:
+            f.write("\n\n---\n## Confirmed Understanding\n\n")
+            f.write(state.understanding)
+        if state.selected_features or state.rejected_features:
+            f.write("\n\n---\n## Feature Gate Decisions\n\n")
+            if state.selected_features:
+                f.write("**Selected:**\n")
+                for feat in state.selected_features:
+                    f.write(f"- {feat.get('name', '?')} ({feat.get('source', 'unknown')})\n")
+            if state.rejected_features:
+                f.write("\n**Rejected:**\n")
+                for feat in state.rejected_features:
+                    f.write(f"- {feat.get('name', '?')} ({feat.get('source', 'unknown')})\n")
         if state.qc_report:
             f.write("\n\n---\n## QC Report\n\n")
             f.write(state.qc_report)
@@ -178,30 +202,36 @@ def _save_plan(state: PipelineState, config: PipelineConfig, output_dir: str | N
 def run(domain: str, config: PipelineConfig = DEFAULT_CONFIG, output_dir: str | None = None) -> PipelineState:
     state = PipelineState(domain=domain)
 
-    # Phase 1: Interview
+    # Phase 1: Interview + confirmed understanding
     state = interviewer.run(state, config)
 
     while state.iteration < config.max_plan_iterations:
         state.iteration += 1
 
-        # Phase 2: Plan
-        state = planner.run(state, config)
-
-        # Phase 3: Brainstorm + Critique + Market Research in parallel
+        # Phase 2 — Wave 1: Plan + Market Research in parallel
         research_note = " + Market Researcher" if config.enable_market_research else ""
-        print(f"\n[Brainstormer + Critic{research_note} running in parallel...]")
+        print(f"\n[Wave 1: Planner{research_note} running in parallel...]")
         if config.enable_market_research:
             print("  (market research uses web search and a self-verify pass — takes longer)")
-        state = _run_parallel(state, config)
+        state = _run_wave1(state, config)
 
-        # Phase 4: Synthesize
-        print("[Synthesizer merging results...]")
+        # Phase 3 — Wave 2: Brainstorm + Critique, grounded in the research
+        print("[Wave 2: Brainstormer + Critic running in parallel (with research in context)...]")
+        state = _run_wave2(state, config)
+
+        # Phase 4: Feature gate — user picks which candidate features to include.
+        # On revision loops, prior selections carry forward instead of re-asking.
+        if state.iteration == 1 or not (state.selected_features or state.rejected_features):
+            state = feature_gate.run(state, config)
+
+        # Phase 5: Synthesize
+        print("\n[Synthesizer merging results...]")
         state = synthesizer.run(state, config)
 
-        # Phase 5: Quality Check loop
+        # Phase 6: Quality Check loop
         state = _run_qc_loop(state, config)
 
-        # Phase 6: Present and confirm
+        # Phase 7: Present and confirm
         _display_plan(state)
         approved, feedback = _confirm(state, config.max_plan_iterations)
 
