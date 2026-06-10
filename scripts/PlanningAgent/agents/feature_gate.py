@@ -32,12 +32,15 @@ Output valid JSON only — an array, no markdown fences:
 [
   {
     "name": "feature name",
-    "source": "inspired by <Competitor> — users rave about it" | "brainstorm — exploits <gap>",
+    "source": "inspired by <Competitor> — users rave about it" | "brainstorm — exploits <gap>" | "original idea — the system's own suggestion",
     "value": "one-line user value",
-    "evidence": "the user praise / market gap / complaint backing this, with source",
+    "evidence": "the user praise / market gap / complaint backing this, with source — for original ideas, the reasoning why it fits this product",
     "tradeoff": "one-line cost or risk"
   }
 ]
+
+Brainstorm entries marked ORIGINAL have no market evidence by design — keep them,
+label their source "original idea — ...", and put the reasoning in "evidence".
 """
 
 

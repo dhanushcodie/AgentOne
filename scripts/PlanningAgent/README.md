@@ -19,7 +19,7 @@ Interview (uncapped, drill-downs)
 | **Interviewer** | Asks specific, scenario-grounded questions — no cap, drills down on vague answers, checks in every 8 questions. Ends with a "here is my understanding" summary you must confirm or correct. |
 | **Planner** | Converts your answers + confirmed understanding into a structured requirements doc. |
 | **Market Researcher** | Web-searches competitors, indie products, user complaints, pricing, revenue comparables, and **standout/hook features users love** — then self-verifies its own report. |
-| **Brainstormer** | Suggests features grounded in confirmed market gaps, real complaints, or competitor hook features (runs after research, in parallel with Critic). |
+| **Brainstormer** | Suggests features grounded in confirmed market gaps, real complaints, or competitor hook features — plus up to `brainstorm_original_count` original ideas of its own, clearly labeled (runs after research, in parallel with Critic). |
 | **Critic** | Derives domain-specific critique lenses, then finds flaws — judged against the real market, not hypotheticals. |
 | **Feature Gate** | Shows you a menu of competitor hook features + brainstorm ideas with evidence and tradeoffs. You pick; your choices become hard constraints. |
 | **Synthesizer** | Merges everything into a final plan. Every feature is tagged with provenance: (interview), (market gap), (inspired by X), (brainstorm). |
@@ -64,7 +64,8 @@ DEFAULT_CONFIG = PipelineConfig(
     interview_checkin_every        = 8,     # ask "keep going or proceed?" every N questions
     require_understanding_confirmation = True,  # confirm summary before research
     max_plan_iterations            = 3,     # how many times you can reject and re-plan
-    brainstorm_count               = 5,     # feature suggestions from Brainstormer
+    brainstorm_count               = 5,     # market-grounded suggestions from Brainstormer
+    brainstorm_original_count      = 2,     # the system's own original ideas on top
     critic_lenses                  = [...], # universal baselines (Critic adds domain-specific)
     output_dir                     = "output",
 

@@ -191,19 +191,32 @@ Requirements draft:
 Market research:
 <MARKET_RESEARCHER_OUTPUT>
 
-Suggest 5 features or improvements the user may not have considered.
-Rules:
+Suggest TWO kinds of ideas the user may not have considered:
+
+PART 1 — 5 MARKET-GROUNDED ideas:
 - Ground every idea in evidence from the market research: a confirmed market gap,
   a real user complaint, or an adaptation of a competitor hook feature. Cite which.
-- Each must be genuinely useful — not padding.
-- Do NOT repeat what's already in the requirements draft.
 - Do NOT simply restate hook features already listed in the research's
   "Standout / Hook Features" section — those are presented to the user separately.
   Your ideas must be additive: novel combinations, adaptations, or gap-fillers.
+
+PART 2 — up to 2 ORIGINAL ideas:
+- Your own inventions — features no competitor has and the research doesn't point
+  to, but that you genuinely believe would delight or hook THIS product's users.
+- Quality bar is higher: only include an original idea if you would fight for it.
+  Fewer (or zero) is fine; padding is not.
+- Since there is no market evidence, the Grounding line must instead give your
+  reasoning: why this fits this specific user, problem, and journey.
+
+Rules for ALL ideas:
+- Each must be genuinely useful — not padding.
+- Do NOT repeat what's already in the requirements draft.
+- Do NOT suggest features that contradict stated constraints.
 Format:
   [N] Feature Name
       Value: one sentence
       Grounding: which gap / complaint / competitor feature this builds on
+                 — or "ORIGINAL: <why this fits this user and problem>"
       Tradeoff: one sentence
 ```
 
@@ -249,16 +262,19 @@ Wait for both to complete.
 ## PHASE 2c — FEATURE DECISION GATE (user picks)
 
 Before synthesizing, present the user a numbered menu of candidate features merged
-from two sources:
+from three sources:
 - Hook features from the research's "Standout / Hook Features" section
-- Brainstorm ideas
+- Market-grounded brainstorm ideas
+- The system's original ideas (brainstorm entries marked ORIGINAL)
 
 Rules for building the menu:
 - Deduplicate — if a brainstorm idea and a hook feature are the same thing, merge them.
 - Exclude features already in the requirements draft.
-- For each entry show: name, source ("inspired by CompetitorX — users rave about it"
-  or "brainstorm — exploits gap Y"), one-line value, the evidence behind it, and a
-  one-line tradeoff.
+- For each entry show: name, source ("inspired by CompetitorX — users rave about it",
+  "brainstorm — exploits gap Y", or "original idea — the system's own suggestion"),
+  one-line value, the evidence behind it, and a one-line tradeoff.
+- Original ideas have no market evidence by design — keep them, label them clearly,
+  and show the reasoning in place of evidence so the user can judge them on merit.
 
 Present it like:
 ```
@@ -317,7 +333,7 @@ From market research: gap, named competitors with URLs, demand signal. If no rea
 ### Competitive Differentiation
 What this product does that confirmed competitors do not. Name competitors specifically — no vague "existing tools" language.
 ### Core Features MVP
-Tag every feature with provenance: (interview), (market gap), (inspired by <Competitor>), or (brainstorm). Flag which address market gaps.
+Tag every feature with provenance: (interview), (market gap), (inspired by <Competitor>), (brainstorm), or (original idea). Flag which address market gaps.
 ### Out of Scope v1
 Include user-rejected features here with a note that the user declined them.
 ### Key Constraints

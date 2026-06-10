@@ -34,7 +34,7 @@ Name the competitors specifically. Do not use vague language like "existing tool
 
 ### Core Features (MVP)
 Tag every feature with its provenance: (interview), (market gap), (inspired by <Competitor>),
-or (brainstorm). Flag which features address market gaps.
+(brainstorm), or (original idea). Flag which features address market gaps.
 
 ### Out of Scope (v1)
 ### Key Constraints

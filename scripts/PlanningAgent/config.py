@@ -27,8 +27,11 @@ class PipelineConfig:
         "edge cases and failure modes",
     ])
 
-    # How many alternative features should brainstormer suggest?
+    # How many market-grounded feature suggestions should brainstormer make?
     brainstorm_count: int = 5
+    # How many original ideas (the system's own, not derived from market evidence)
+    # may the brainstormer add on top? Labeled separately in the feature menu.
+    brainstorm_original_count: int = 2
 
     # Where to save the final plan markdown file.
     output_dir: str = "output"
@@ -58,7 +61,7 @@ class PipelineConfig:
     tokens_interview: int = 512          # one question at a time, short output
     tokens_interview_summary: int = 1024 # "here is my understanding" checkpoint summary
     tokens_plan: int = 2000              # full structured requirements doc
-    tokens_brainstorm: int = 1500        # N feature suggestions with value + tradeoff each
+    tokens_brainstorm: int = 2000        # grounded + original suggestions with value + tradeoff each
     tokens_critique_derive: int = 256    # just a JSON array of lens names
     tokens_critique_evaluate: int = 2000 # full critique across all lenses
     tokens_market_research: int = 6000   # market researcher needs room for search + hook features + synthesis
