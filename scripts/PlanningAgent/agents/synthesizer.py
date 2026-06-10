@@ -65,9 +65,15 @@ Guidelines:
 - Do not pad. Keep tone direct and decision-ready.
 - If a section has nothing meaningful, write one sentence explaining why rather than omitting.
 
+EVIDENCE HONESTY: never stretch research findings to fill a section. If the research
+says "not found in public sources" for something, carry that statement into the plan
+with a caveat — false precision fails the quality audit; honest absence passes it.
+
 SELF-AUDIT — before outputting, verify all five:
   (1) At least 2 specific competitors are named with URLs or descriptions.
-  (2) Monetisation Direction cites a real comparable product with a data point.
+  (2) Monetisation Direction cites a real comparable product with a data point —
+      or honestly states no same-market comparable was found, with the closest
+      available signal and a clear caveat.
   (3) Every [UNCLEAR] from the requirements draft is resolved or in Open Questions.
   (4) Every user-selected feature from the feature gate is present in the plan.
   (5) The plan is consistent with the confirmed understanding summary — especially

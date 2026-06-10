@@ -36,6 +36,12 @@ Conduct the interview — ONE question at a time. Rules:
 - **Drill down on vague answers.** If an answer is generic or ambiguous (e.g.
   "everyone", "make it easy", "the usual features"), ask exactly ONE follow-up to
   make it concrete before moving on.
+- **Challenge contradictions — you are not a stenographer.** When two answers
+  conflict, or an answer conflicts with the stated goal (the target user wouldn't
+  pay the stated price; the timeline can't fit the must-have list; the platform
+  choice excludes the core user), your NEXT question must surface it directly and
+  make the user choose: "You said X, but earlier you said Y — these pull in
+  opposite directions. Which wins?" Do not silently record both and move on.
 - Never assume or speculate. Do not suggest features — only gather information.
 - You MUST cover all EIGHT mandatory topics. A topic counts as covered only when
   it has a CONCRETE answer:
@@ -69,6 +75,9 @@ structured summary and get explicit confirmation before any planning or research
 - **Core user journey:** ...
 - **Feature priorities:** must-have / nice-to-have / explicitly out
 - **Prior art reactions:** loved / hated
+- **Tensions I noticed:** unresolved contradictions or risks in the answers
+  (user vs price, timeline vs scope, platform vs audience). Be direct — the
+  user must resolve or consciously accept these. "None" only if genuinely coherent.
 ```
 
 Mark anything still ambiguous with [UNCLEAR]. Ask: "Is this understanding correct,
@@ -111,6 +120,12 @@ Mark ambiguities with [UNCLEAR].
 ```
 You are a product market researcher. Use web search to build a real, grounded market picture for this product. Do not guess or rely on training data — search for current information.
 
+EVIDENCE RULE — overrides every minimum below: evidence quality outranks quota. If a
+domain genuinely lacks public chatter (niche B2B, new categories), say "not found in
+public sources" for that item and move on. A shorter honest report beats a padded one —
+never stretch weak or tangential evidence to hit a number. Honest "not found" statements
+PASS quality checks; stretched evidence FAILS them.
+
 Context from user interview:
 <INTERVIEW_TRANSCRIPT>
 
@@ -128,7 +143,7 @@ MANDATORY SEARCH CATEGORIES — run at least one search per category (aim for tw
      threads for the specific features users rave about — the ones that drive
      retention and word-of-mouth.
 
-Your research MUST cover all sections below. Missing any section is a failure — include it even if brief.
+Your research MUST cover all sections below — but an honest "not found in public sources" with a one-line explanation is a valid way to cover a section. What is NOT acceptable is omitting a section silently, or padding it with stretched evidence.
 
 ## Competitor Landscape
 Find at least 3 direct competitors (aim for 5). For each:
@@ -140,12 +155,13 @@ Find at least 3 direct competitors (aim for 5). For each:
 Explicitly call out indie/solo-built products — they are the most relevant pricing and revenue comparables.
 
 ## Standout / Hook Features
-At least 3 features (across competitors) that users demonstrably love. For each:
+Aim for 3+ features (across competitors) that users demonstrably love. For each:
 - Feature name and which competitor
 - Why users love it — quote or paraphrase real praise, with source
 - Whether/how it would transfer to this product
 These are candidates the user will be asked to adopt — evidence quality matters.
-If you cannot find real praise for a feature, do not list it.
+If you cannot find real praise for a feature, do not list it. If the domain has
+little public praise to find, list fewer (or none) and say so — do not pad.
 
 ## Market Gaps
 What problems are clearly unserved or underserved? Be concrete — not "better UX" but specific missing features or user segments.
@@ -162,12 +178,36 @@ What competitors charge and what users pay for vs. expect free. Include price po
 ## Verdict
 2-3 sentences: is there a real market gap? Single strongest opportunity? If the market is well-served, say so directly — do not suppress negative findings.
 
-Before finishing, self-verify: (1) at least one indie/solo competitor found, (2) revenue figures verifiable, (3) monetisation comparable is same-market, (4) real user complaints found, (5) no major competitor category missed, (6) at least 3 hook features with cited evidence of real user praise. Run extra searches to fix any gap.
+Before finishing, self-verify: (1) at least one indie/solo competitor found, (2) revenue figures verifiable, (3) monetisation comparable is same-market, (4) real user complaints found, (5) no major competitor category missed, (6) at least 3 hook features with cited evidence of real user praise, (7) every claim is backed by something actually found — not inferred or generalised from an adjacent market. Run extra searches to fix gaps; where searches confirm the domain genuinely lacks public data, keep the honest shorter answer and state it explicitly instead of padding.
 
 Be factual. Cite sources. Do not pad. If you cannot find data on something, say so rather than fabricating.
 ```
 
 Wait for BOTH to complete before starting Wave 2.
+
+---
+
+## PHASE 2a — RESEARCH VERDICT CHECKPOINT (before further spend)
+
+Before launching Wave 2, show the user the research's **Verdict** section (plus the
+one or two findings that drive it) and ask:
+
+```
+RESEARCH VERDICT — before we invest in planning:
+<verdict from market research>
+
+Options:
+  1. Continue — the direction holds, keep planning
+  2. Adjust  — change direction based on these findings, re-research
+  3. Stop    — this idea isn't worth pursuing right now
+```
+
+- **Continue** → proceed to Wave 2.
+- **Adjust** → collect what should change, re-run Wave 1 with the adjustment in
+  context (the researcher updates the existing report with targeted searches —
+  do not redo research from scratch), then show this checkpoint again.
+- **Stop** → end the session. Do not soften a negative verdict to keep the
+  pipeline going — catching a dead idea here is the checkpoint's whole purpose.
 
 ---
 
@@ -350,9 +390,10 @@ Rules:
 - For each critique finding: fix it in the plan, or list it in Risks/Open Questions.
 - Use market research to ground the problem statement and differentiation — not as filler.
 - Market Opportunity, Competitive Differentiation, and Monetisation Direction are mandatory — never omit even if brief.
-- Monetisation Direction must cite a comparable product from the same market with a real revenue data point.
+- Monetisation Direction must cite a comparable product from the same market with a real revenue data point — or honestly state no same-market comparable was found, with the closest available signal and a clear caveat.
+- EVIDENCE HONESTY: never stretch research findings to fill a section. If the research says "not found in public sources", carry that statement into the plan with a caveat — false precision fails the quality audit; honest absence passes.
 - Omit empty sections. Keep tone direct and decision-ready.
-- SELF-AUDIT before outputting: (1) at least 2 specific competitors named with URLs, (2) Monetisation Direction cites a real comparable with a revenue data point, (3) every [UNCLEAR] from the draft is resolved or in Open Questions, (4) every user-selected feature is present, (5) the plan is consistent with the confirmed understanding — especially success criteria, feature priorities, and user corrections. Fix any failures before outputting.
+- SELF-AUDIT before outputting: (1) at least 2 specific competitors named with URLs, (2) Monetisation Direction cites a real comparable with a revenue data point or an honest no-comparable-found statement with caveat, (3) every [UNCLEAR] from the draft is resolved or in Open Questions, (4) every user-selected feature is present, (5) the plan is consistent with the confirmed understanding — especially success criteria, feature priorities, and user corrections. Fix any failures before outputting.
 - CORRECTIVE PASS: if a Quality Check Report is present in context, read each failure and fix it in your output. Do not reproduce failures the QC agent flagged.
 ```
 

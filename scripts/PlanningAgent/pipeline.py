@@ -3,6 +3,7 @@ Requirements Engineering Pipeline
 ----------------------------------
 Interview (+ confirmed understanding)
   → Wave 1: [Plan || Market Research]
+  → Research Verdict gate (continue / adjust / stop — before further spend)
   → Wave 2: [Brainstorm || Critique]  (both see the research)
   → Feature Gate (user picks hook features + brainstorm ideas)
   → Synthesize → QC → Confirm
@@ -72,6 +73,49 @@ def _run_wave2(state: PipelineState, config: PipelineConfig) -> PipelineState:
     state.brainstorm = brainstorm_state.brainstorm
     state.critique = critic_state.critique
     return state
+
+
+def _extract_verdict(research: str) -> str:
+    """Pull the Verdict section from the research report (falls back to the tail)."""
+    idx = research.lower().rfind("## verdict")
+    if idx == -1:
+        return research[-600:]
+    return research[idx:]
+
+
+def _research_verdict_gate(state: PipelineState, config: PipelineConfig) -> PipelineState:
+    """
+    Pause after Wave 1: show the market verdict and let the user continue,
+    adjust direction (targeted re-research), or stop — BEFORE the pipeline
+    spends on brainstorm, critique, feature menu, and synthesis.
+    """
+    if not (config.enable_research_verdict_gate and config.enable_market_research):
+        return state
+
+    while True:
+        print("\n" + "=" * 60)
+        print("RESEARCH VERDICT — before we invest in planning")
+        print("=" * 60)
+        print(_extract_verdict(state.market_research))
+        print("\nOptions:")
+        print("  1. Continue — the direction holds, keep planning")
+        print("  2. Adjust  — change direction based on these findings, re-research")
+        print("  3. Stop    — this idea isn't worth pursuing right now")
+
+        choice = input("\nYour choice (1/2/3): ").strip()
+        if choice == "1":
+            return state
+        if choice == "2":
+            feedback = input("What should change about the direction? Be specific:\n> ").strip()
+            state.user_feedback = feedback
+            print("\n[Re-running Wave 1 with the adjusted direction "
+                  "(research updates incrementally)...]")
+            state = _run_wave1(state, config)
+            continue
+        if choice == "3":
+            print("\nStopping before further spend. Your checkpoint is kept — "
+                  "run with --resume if you change your mind.")
+            sys.exit(0)
 
 
 def _run_qc_loop(state: PipelineState, config: PipelineConfig) -> PipelineState:
@@ -167,7 +211,7 @@ _PIPELINE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 # Phase progression for checkpoint/resume. state.phase records the last
 # COMPLETED phase; each step in run() only executes if not yet past it.
-_PHASES = ["", "interview", "wave1", "wave2", "gate", "synthesize", "qc"]
+_PHASES = ["", "interview", "wave1", "verdict", "wave2", "gate", "synthesize", "qc"]
 
 
 def _phase_idx(phase: str) -> int:
@@ -278,6 +322,12 @@ def run(domain: str, config: PipelineConfig = DEFAULT_CONFIG,
                 print("  (market research uses web search and a self-verify pass — takes longer)")
             state = _run_wave1(state, config)
             state.phase = "wave1"
+            _save_checkpoint(state, config)
+
+        # Phase 2½ — Research verdict checkpoint: continue / adjust / stop
+        if _phase_idx(state.phase) < _phase_idx("verdict"):
+            state = _research_verdict_gate(state, config)
+            state.phase = "verdict"
             _save_checkpoint(state, config)
 
         # Phase 3 — Wave 2: Brainstorm + Critique, grounded in the research

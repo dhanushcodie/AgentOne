@@ -56,6 +56,10 @@ class PipelineConfig:
     # On revision loops, research runs as a targeted update on top of the existing
     # report instead of a full re-research. This caps the update's search budget.
     revision_research_max_searches: int = 6
+    # After Wave 1, show the research verdict and ask continue / adjust / stop
+    # BEFORE spending on brainstorm, critique, and synthesis. Catches dead or
+    # mis-aimed ideas early instead of at the very end.
+    enable_research_verdict_gate: bool = True
 
     # Feature decision gate: after research + brainstorm, present a menu of
     # competitor hook features and brainstorm ideas for the user to pick from
