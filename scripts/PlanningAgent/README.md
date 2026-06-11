@@ -5,9 +5,10 @@ A multi-agent CLI tool that interviews you about what you want to build, confirm
 ## How it works
 
 ```
-Interview (uncapped, drill-downs)
-   → Confirm understanding (you approve a summary before anything runs)
+Interview (uncapped, drill-downs, challenges contradictions)
+   → Confirm understanding (you approve a summary — incl. flagged tensions — before anything runs)
    → Wave 1: [Planner ‖ Market Researcher]          (research uses web search)
+   → Research Verdict gate (continue / adjust / stop — before further spend)
    → Wave 2: [Brainstormer ‖ Critic]                (both grounded in the research)
    → Feature Gate (you pick hook features + ideas)
    → Synthesize → Quality Check → Confirm
@@ -16,9 +17,10 @@ Interview (uncapped, drill-downs)
 
 | Agent | What it does |
 |---|---|
-| **Interviewer** | Asks specific, scenario-grounded questions — no cap, drills down on vague answers, checks in every 8 questions. Ends with a "here is my understanding" summary you must confirm or correct. |
+| **Interviewer** | Asks specific, scenario-grounded questions — no cap, drills down on vague answers, challenges contradictions in your answers instead of recording them, checks in every 8 questions. Ends with a "here is my understanding" summary (including flagged tensions) you must confirm or correct. |
 | **Planner** | Converts your answers + confirmed understanding into a structured requirements doc. |
-| **Market Researcher** | Web-searches competitors, indie products, user complaints, pricing, revenue comparables, and **standout/hook features users love** — then self-verifies its own report. |
+| **Market Researcher** | Web-searches competitors, indie products, user complaints, pricing, revenue comparables, and **standout/hook features users love** — then self-verifies its own report. Honest "not found" beats padded evidence by explicit rule. |
+| **Verdict Gate** | After research, shows you the market verdict and asks continue / adjust / stop — so a dead or mis-aimed idea is caught before brainstorm, critique, and synthesis spend. |
 | **Brainstormer** | Suggests features grounded in confirmed market gaps, real complaints, or competitor hook features — plus up to `brainstorm_original_count` original ideas of its own, clearly labeled (runs after research, in parallel with Critic). |
 | **Critic** | Derives domain-specific critique lenses, then finds flaws — judged against the real market, not hypotheticals. |
 | **Feature Gate** | Shows you a menu of competitor hook features + brainstorm ideas with evidence and tradeoffs. You pick; your choices become hard constraints. |
@@ -84,6 +86,7 @@ DEFAULT_CONFIG = PipelineConfig(
     market_research_collect_ratio  = 2/3,   # share of budget for collection vs self-verify
     hook_features_min              = 3,     # min evidenced hook features researcher must find
     revision_research_max_searches = 6,     # targeted top-up budget on revision loops
+    enable_research_verdict_gate   = True,  # pause after research: continue/adjust/stop
 
     enable_feature_gate            = True,  # menu of hook features + ideas you pick from
     enable_quality_check           = True,

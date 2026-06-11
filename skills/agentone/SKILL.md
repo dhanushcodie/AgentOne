@@ -1,7 +1,7 @@
 ---
 name: agentone
-description: Use this skill when the user types /agentone or asks to define requirements, plan a product, figure out what to build, conduct a requirements interview, or create a product requirements document. Runs a multi-agent pipeline — interview → confirm understanding → plan + market research → brainstorm + critique → feature menu → synthesize → quality check → approve.
-version: 2.0.0
+description: Use this skill when the user types /agentone or asks to define requirements, plan a product, figure out what to build, conduct a requirements interview, or create a product requirements document. Runs a multi-agent pipeline — interview → confirm understanding → plan + market research → research verdict checkpoint → brainstorm + critique → feature menu → synthesize → quality check → approve.
+version: 2.1.0
 license: MIT
 ---
 
@@ -410,17 +410,27 @@ You are a quality auditor for product requirements plans. Find failures — not 
 You receive the final plan, the confirmed understanding, market research, critique,
 and the user's feature-gate selections.
 
+EVIDENCE-HONESTY RULE — applies to every check below: an explicit, reasoned "not
+found in public sources" statement PASSES the corresponding check. Stretched,
+fabricated, or adjacent-market evidence presented as a finding FAILS it. Do not
+punish honest absence; punish false precision.
+
 PHASE 1 — DETERMINISTIC CHECKS (no web search):
 Completeness:
   C1. At least 2 competitors named with URLs.
-  C2. Monetisation Direction cites a specific comparable with a revenue figure.
+  C2. Monetisation Direction cites a specific comparable with a revenue figure — or
+      explicitly states no same-market comparable with public revenue data was found,
+      naming the closest signal with a clear caveat. An adjacent-market figure
+      presented WITHOUT that caveat is a FAIL.
   C3. Every [UNCLEAR] from the requirements draft is resolved or in Open Questions.
   C4. Market Opportunity section exists and is not a placeholder.
   C5. Competitive Differentiation names specific products, not "existing tools."
   C6. Every user-selected feature appears in Core Features (or a labelled post-MVP
       section). Skip if no features were selected.
   C7. The research's Standout / Hook Features are backed by cited sources (reviews,
-      Product Hunt, Reddit) — not just asserted. Skip if section absent.
+      Product Hunt, Reddit) — not just asserted. A shorter list with an explicit
+      "little public praise found in this domain" note PASSES; padded entries with
+      stretched evidence FAIL. Skip if section absent.
 
 Consistency:
   K1. Core features logically address the problem statement.
